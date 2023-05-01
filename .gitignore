@@ -1,0 +1,14 @@
+# Ignore everything.
+**
+
+# But include these files...
+!.gitignore
+!Dockerfile-prod
+!LICENSE
+!README.md
+# ... and these files...
+!src/
+src/*
+!src/go.mod
+!src/go.sum
+!src/main.go
