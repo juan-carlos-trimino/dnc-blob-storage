@@ -26,12 +26,17 @@ WORKDIR /goapp/
 COPY ./src/go.* ./
 # Copy the code from the local machine to the container image.
 COPY ./src/main.go ./
+COPY ./src/blob ./blob/
 
 # Download necessary Go modules; see https://go.dev/ref/mod#go-mod-download
-# Build the binary; see https://go.googlesource.com/sublime-build/+/HEAD/docs/configuration.md
-RUN go mod download
-RUN go get github.com/rabbitmq/amqp091-go
-RUN go build -o ./godir/consumer -v main.go
+RUN go mod download && \
+    go get github.com/rabbitmq/amqp091-go && \
+    # Retrieve the SDK.
+    go get github.com/IBM/ibm-cos-sdk-go && \
+    # Retrieve the latest version of the SDK.
+    go get -u github.com/IBM/ibm-cos-sdk-go && \
+    # Build the binary; see https://go.googlesource.com/sublime-build/+/HEAD/docs/configuration.md
+    go build -o ./godir/storage -v main.go
 
 FROM alpine:3.17
 
@@ -40,8 +45,8 @@ WORKDIR /
 # Copy the binary to the production image from the builder stage.
 COPY --from=builder /goapp/godir/ ./goapp/
 
-USER 1000:1000
+USER 1001:1001
 
 EXPOSE 8080
 
-ENTRYPOINT ["./goapp/consumer"]
+ENTRYPOINT ["./goapp/storage"]

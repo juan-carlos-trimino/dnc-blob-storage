@@ -8,9 +8,10 @@ import (
   "net/http"
   "os"
   "os/signal"
-  "syscall"
+  "storage/blob"
   "strconv"
   "strings"
+  "syscall"
   "time"
 )
 
@@ -141,7 +142,8 @@ func main() {
     // //https://go.dev/src/net/http/status.go
     res.WriteHeader(http.StatusOK)
   }
-//  h.mux["/retrieve_blob"] = a.AverageRateOfReturn
+  var b blob.Blob
+  h.mux["/storage/blob/ListBuckets"] = b.ListBuckets
 //  h.mux["/fin/annuities/GrowthDecayOfFunds"] = a.GrowthDecayOfFunds
   server := &http.Server {
     /***

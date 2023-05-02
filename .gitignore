@@ -11,5 +11,8 @@
 !src/
 src/*
 !src/go.mod
-!src/go.sum
+#!src/go.sum
 !src/main.go
+!src/blob/
+src/blob/*
+!blob.go
