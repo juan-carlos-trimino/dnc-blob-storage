@@ -67,12 +67,18 @@ func main() {
     return
   }
   //
+  REGION, exists = os.LookupEnv("REGION")
+  if !exists {
+    fmt.Println("Missing environment variable: REGION.")
+    return
+  }
+  //
   if strings.EqualFold(AUTHENTICATION_TYPE, "hmac") {
-    REGION, exists = os.LookupEnv("REGION")
-    if !exists {
-      fmt.Println("Missing environment variable: REGION.")
-      return
-    }
+    // REGION, exists = os.LookupEnv("REGION")
+    // if !exists {
+    //   fmt.Println("Missing environment variable: REGION.")
+    //   return
+    // }
     //
     SECRET_ACCESS_KEY, exists = os.LookupEnv("SECRET_ACCESS_KEY")
     if !exists {
@@ -144,7 +150,9 @@ func main() {
   }
   var b blob.Blob
   h.mux["/storage/blob/ListBuckets"] = b.ListBuckets
-//  h.mux["/fin/annuities/GrowthDecayOfFunds"] = a.GrowthDecayOfFunds
+  h.mux["/storage/blob/CreateBucket"] = b.CreateBucket
+  h.mux["/storage/blob/DeleteBucket"] = b.DeleteBucket
+  h.mux["/storage/blob/ListItemsInBucket"] = b.ListItemsInBucket
   server := &http.Server {
     /***
     By not specifying an IP address before the colon, the server will listen on every IP address
