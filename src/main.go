@@ -153,6 +153,7 @@ func main() {
   h.mux["/storage/blob/CreateBucket"] = b.CreateBucket
   h.mux["/storage/blob/DeleteBucket"] = b.DeleteBucket
   h.mux["/storage/blob/ListItemsInBucket"] = b.ListItemsInBucket
+  h.mux["/storage/blob/UploadBlobFile"] = b.UploadBlobFile
   server := &http.Server {
     /***
     By not specifying an IP address before the colon, the server will listen on every IP address
