@@ -409,6 +409,7 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
   switch detectedFileType {
   case "image/jpeg", "image/jpg":
   case "image/gif", "image/png":
+  case "video/mp4":
   case "application/pdf":
     break
   default:
