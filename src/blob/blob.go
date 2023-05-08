@@ -3,11 +3,16 @@ package blob
 import (
 	// "bytes"
 	"bytes"
-  "fmt"
-  "io/ioutil"
+  // "context"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
+  "strconv"
+
+  // "github.com/IBM/ibm-cos-sdk-go/feature/s3/manager"
 
 	"github.com/IBM/ibm-cos-sdk-go/aws"
 	"github.com/IBM/ibm-cos-sdk-go/aws/awserr"
@@ -25,7 +30,7 @@ var conf = aws.NewConfig().
            WithCredentials(ibmiam.NewStaticCredentials(aws.NewConfig(),
             "https://iam.cloud.ibm.com/identity/token", os.Getenv("API_KEY"),
             os.Getenv("SERVICE_INSTANCE_ID"))).
-          WithS3ForcePathStyle(true)
+           WithS3ForcePathStyle(true)
 
 //https://cloud.ibm.com/docs/cloud-object-storage?topic=cloud-object-storage-using-go
 
@@ -58,7 +63,7 @@ func (b Blob) ListBuckets(res http.ResponseWriter, req *http.Request) {
 }
 
 /***
-http://xxx.xxx.xxx.xxx/storage/blob/CreateBucket?name=XXXX
+http://xxx.xxx.xxx.xxx/storage/blob/CreateBucket?bucket=XXXX
 ***/
 func (b Blob) CreateBucket(res http.ResponseWriter, req *http.Request) {
   const paramsRequired int = 1
@@ -68,11 +73,10 @@ func (b Blob) CreateBucket(res http.ResponseWriter, req *http.Request) {
     return
   }
   var bucket string
-  var err = error(nil)
   //Iterate over all the query parameters.
   for k, v := range params { //map[string][]string
     switch strings.ToLower(k) {
-    case "name":
+    case "bucket":
       bucket = v[0]
     default:
       fmt.Fprintf(res, "'%s' is an invalid parameter name.", k)
@@ -81,7 +85,7 @@ func (b Blob) CreateBucket(res http.ResponseWriter, req *http.Request) {
   }
   sess := session.Must(session.NewSession())
   client := s3.New(sess, conf)
-  _, err = client.CreateBucket(&s3.CreateBucketInput {
+  _, err := client.CreateBucket(&s3.CreateBucketInput {
     Bucket: aws.String(bucket),
   })
   if err != nil {
@@ -90,7 +94,7 @@ func (b Blob) CreateBucket(res http.ResponseWriter, req *http.Request) {
 }
 
 /***
-http://xxx.xxx.xxx.xxx/storage/blob/CreateBucket?name=XXXX
+http://xxx.xxx.xxx.xxx/storage/blob/CreateBucket?bucket=XXXX
 ***/
 func (b Blob) DeleteBucket(res http.ResponseWriter, req *http.Request) {
   const paramsRequired int = 1
@@ -100,11 +104,10 @@ func (b Blob) DeleteBucket(res http.ResponseWriter, req *http.Request) {
     return
   }
   var bucket string
-  var err = error(nil)
   //Iterate over all the query parameters.
   for k, v := range params { //map[string][]string
     switch strings.ToLower(k) {
-    case "name":
+    case "bucket":
       bucket = v[0]
     default:
       fmt.Fprintf(res, "'%s' is an invalid parameter name.", k)
@@ -113,16 +116,16 @@ func (b Blob) DeleteBucket(res http.ResponseWriter, req *http.Request) {
   }
   sess := session.Must(session.NewSession())
   client := s3.New(sess, conf)
-  _, err = client.DeleteBucket(&s3.DeleteBucketInput {
+  _, err := client.DeleteBucket(&s3.DeleteBucketInput {
     Bucket: aws.String(bucket),
   })
   if err != nil {
-    fmt.Fprintf(res, "%v", err)
+    fmt.Fprintf(res, "%+v", err)
   }
 }
 
 /***
-http://xxx.xxx.xxx.xxx/storage/blob/ListItemsInBucket?name=xxxx
+http://xxx.xxx.xxx.xxx/storage/blob/ListItemsInBucket?bucket=xxxx
 ***/
 func (b Blob) ListItemsInBucket(res http.ResponseWriter, req *http.Request) {
   fmt.Printf("Listing items in bucket.\n")
@@ -134,11 +137,10 @@ func (b Blob) ListItemsInBucket(res http.ResponseWriter, req *http.Request) {
     return
   }
   var bucket string
-  var err = error(nil)
   //Iterate over all the query parameters.
   for k, v := range params { //map[string][]string
     switch strings.ToLower(k) {
-    case "name":
+    case "bucket":
       bucket = v[0]
     default:
       fmt.Fprintf(res, "'%s' is an invalid parameter name.", k)
@@ -157,7 +159,7 @@ func (b Blob) ListItemsInBucket(res http.ResponseWriter, req *http.Request) {
     fmt.Fprintf(res, "Bucket: %s\n%v", bucket, err)
     fmt.Printf("Bucket: %s\n%v", bucket, err)
   } else {
-    fmt.Fprintf(res, "Found %d items in bucket %s", len(items.Contents), bucket)
+    fmt.Fprintf(res, "Found %d item(s) in bucket %s.\n", len(items.Contents), bucket)
     fmt.Printf("Found %d items in bucket %s\n", len(items.Contents), bucket)
     for i, item := range items.Contents {
       fmt.Fprintf(res, "%d.\t%s\t%s\t%d\t%s\n", i + 1, *item.Key, *item.LastModified, *item.Size,
@@ -166,8 +168,142 @@ func (b Blob) ListItemsInBucket(res http.ResponseWriter, req *http.Request) {
   }
 }
 
+/***
+http://xxx.xxx.xxx.xxx/storage/blob/DeleteItemFromBucket?bucket=xxxx&item=xxx
+***/
+func (b Blob) DeleteItemFromBucket(res http.ResponseWriter, req *http.Request) {
+  fmt.Printf("Deleting an item from a bucket.\n")
+  const paramsRequired int = 2
+  params := req.URL.Query()
+  if len(params) != paramsRequired {
+    fmt.Fprintf(res, "Parameters required = %d; parameters provided = %d", paramsRequired, len(params))
+    fmt.Printf("Parameters required = %d; parameters provided = %d\n", paramsRequired, len(params))
+    return
+  }
+  var bucket string
+  var item string
+  //Iterate over all the query parameters.
+  for k, v := range params { //map[string][]string
+    switch strings.ToLower(k) {
+    case "bucket":
+      bucket = v[0]
+    case "item":
+      item = v[0]
+    default:
+      fmt.Fprintf(res, "'%s' is an invalid parameter name.", k)
+      fmt.Printf("'%s' is an invalid parameter name.\n", k)
+      return
+    }
+  }
+  sess := session.Must(session.NewSession())
+  client := s3.New(sess, conf)
+  /***
+  Removes the null version (if there is one) of an object and inserts a delete marker, which
+  becomes the latest version of the object. If there isn't a null version, Amazon S3 does not
+  remove any objects. (If the object doesn't exist, it's not an error when calling DeleteObject.)
+  ***/
+  _, err := client.DeleteObject(&s3.DeleteObjectInput{
+    Bucket: aws.String(bucket),
+    Key: aws.String(item),
+  })
+  if err != nil {
+    fmt.Fprintf(res, "%+v", err)
+    fmt.Printf("Error when deleting item '%s' from bucket '%s': %+v\n", item, bucket, err)
+  } else {
+    fmt.Fprintf(res, "Item '%s' was deleted from bucket '%s'.\n", item, bucket)
+    fmt.Printf("Item '%s' was deleted from bucket '%s'.\n", item, bucket)
+  }
+}
+
+/***
+http://XXX.XXX.XXX.XXX/storage/blob/DownloadBlobFile?bucket=xxxx&item=xxxx
+***/
+func (b Blob) DownloadBlobFile(res http.ResponseWriter, req *http.Request) {
+  fmt.Printf("Downloading an item from a bucket.\n")
+  const paramsRequired int = 2
+  params := req.URL.Query()
+  if len(params) != paramsRequired {
+    fmt.Fprintf(res, "Parameters required = %d; parameters provided = %d", paramsRequired, len(params))
+    fmt.Printf("Parameters required = %d; parameters provided = %d\n", paramsRequired, len(params))
+    return
+  }
+  var bucket string
+  var item string
+  //Iterate over all the query parameters.
+  for k, v := range params { //map[string][]string
+    switch strings.ToLower(k) {
+    case "bucket":
+      bucket = v[0]
+    case "item":
+      item = v[0]
+    default:
+      fmt.Fprintf(res, "'%s' is an invalid parameter name.", k)
+      fmt.Printf("'%s' is an invalid parameter name.\n", k)
+      return
+    }
+  }
+  sess := session.Must(session.NewSession())
+  client := s3.New(sess, conf)
+  result, err := client.GetObject(&s3.GetObjectInput{
+    Bucket: aws.String(bucket),
+    Key: aws.String(item),
+  })
+  if err != nil {
+    if aerr, ok := err.(awserr.Error); ok {
+      switch aerr.Code() {
+      case s3.ErrCodeNoSuchKey:
+        fmt.Printf("%+v\n", aerr.Error())
+        fmt.Fprintf(res, aerr.Error(), s3.ErrCodeNoSuchKey)
+      case s3.ErrCodeInvalidObjectState:
+        fmt.Printf("%+v\n", aerr.Error())
+        fmt.Fprintf(res, aerr.Error(), s3.ErrCodeInvalidObjectState)
+      default:
+        fmt.Printf("%+v\n", aerr.Error())
+        fmt.Fprintf(res, aerr.Error())
+      }
+    } else {
+      fmt.Printf("GetObject Error: %+v\n", err.Error())
+      fmt.Fprintf(res, err.Error())
+    }
+    return
+  }
+  defer result.Body.Close()
+  /***
+  To make the browser open the download dialog, add a Content-Disposition and Content-Type headers
+  to the response. Furthermore, to show proper progress, add the Content-Length header of the
+  response.
+  ***/
+  res.Header().Set("Content-Disposition", "attachment; filename=" + strconv.Quote(item))
+  res.Header().Set("Content-Type", *result.ContentType)
+  res.Header().Set("Content-Length", fmt.Sprintf("%d", *result.ContentLength))
+  //Stream the body to the client without fully loading it into memory.
+  size, err := io.Copy(res, result.Body)
+  if err != nil {
+    fmt.Printf("Copy failed: %+v\n", err)
+    fmt.Fprintf(res, "Copy failed: %+v", err)
+  } else {
+    fmt.Printf("Downloaded file %s successfully; sent=%d -> storage=%d.\n", item, size, *result.ContentLength)
+    // fmt.Fprintf(res, "Downloaded file %s successfully; sent=%d -> storage=%d.", item, size, *result.ContentLength)
+  }
+}
 
 
+
+/***
+func emptyBucket(service *s3.S3, bucketName string) {
+	objs, err := service.ListObjects(&s3.ListObjectsInput{Bucket: stringPtr(bucketName)})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, o := range objs.Contents {
+		_, err := service.DeleteObject(&s3.DeleteObjectInput{Bucket: stringPtr(bucketName), Key: o.Key})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+***/
 
 /***
 http://XXX.XXX.XXX.XXX/storage/blob/UploadBlobFile?bucket=xxxx
@@ -176,12 +312,11 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
   const paramsRequired int = 1
   params := req.URL.Query()
   if len(params) != paramsRequired {
-    fmt.Fprintf(res, "Parameters required = 1; parameters provided = %d", len(params))
-    fmt.Printf("Parameters required = 1; parameters provided = %d\n", len(params))
+    fmt.Fprintf(res, "Parameters required = %d; parameters provided = %d", paramsRequired, len(params))
+    fmt.Printf("Parameters required = %d; parameters provided = %d\n", paramsRequired, len(params))
     return
   }
   var bucket string
-  var err = error(nil)
   //Iterate over all the query parameters.
   for k, v := range params { //map[string][]string
     switch strings.ToLower(k) {
@@ -194,7 +329,7 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
     }
   }
   //
-  if req.Method != "POST" {
+  if req.Method != http.MethodPost {
     fmt.Println("Uploading a blob file...")
     fmt.Fprint(res,
       `<html>
@@ -209,7 +344,7 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
            </div>
            <br><br><br>
            <div style="float:center;">
-             <input type="submit" value="Upload" style="height:50px; width:100px">
+             <input type="submit" value="Upload" style="height:40px; width:200px">
            </div>
          </form>
        </body>
@@ -217,16 +352,33 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
     return
   }
 
-    // Parse our multipart form, 10 << 20 specifies a maximum
-    // upload of 10 MB files.
-    // r.ParseMultipartForm(10 << 20)
 
-  //err = req.ParseMultipartForm(10 << 20)  //32MB in memory, rest on disk.
+  //MaxBytesReader prevents clients from accidentally or maliciously sending a large request and wasting server resources. If possible, it tells the ResponseWriter to close the connection after the limit has been reached.
+  req.Body = http.MaxBytesReader(res, req.Body, 100 << 20)
+  defer req.Body.Close()
+  // defer func() {
+  //   if r := recover(); r != nil {
+  //     http.Error(res, "Violation of max bytes.", http.StatusInternalServerError)
+  //     fmt.Printf("Multipartyyy form: %+v\n", r)
+  //     return
+  //   }
+  // }()
+
+
+  // n << x = n * 2^x
+  // n << x = n / 2^x
+  err := req.ParseMultipartForm(32 << 20)  //32MB in memory, rest on disk.
   if err != nil {
-    http.Error(res, err.Error(), http.StatusInternalServerError)
-    fmt.Printf("Error 1: %v", err)
+    if err == io.ErrUnexpectedEOF {
+      fmt.Printf("Request body too large (Multipartxxx form): %+v\n", err)
+      http.Error(res, err.Error(), http.StatusRequestEntityTooLarge)
+    } else {
+      fmt.Printf("Requestaaa body too large (Multipartxxx form): %+v\n", err)
+      http.Error(res, err.Error(), http.StatusInternalServerError)
+    }
     return
   }
+
   // FormFile returns the first file for the given key `uploadfile`
   // it also returns the FileHeader so we can get the Filename,
   // the Header and the size of the file
@@ -234,7 +386,7 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
   if err != nil {
     //fmt.Fprintln(res, err)
     http.Error(res, err.Error(), http.StatusInternalServerError)
-    fmt.Printf("Error 2: %v", err)
+    fmt.Printf("Error while parsing the form parameters: %+v", err)
     return
   }
   defer infile.Close()
@@ -243,13 +395,31 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
   fmt.Printf("MIME Header: %+v\n", handler.Header)
   
   
-
-    // read all of the contents of our uploaded file into a
-    // byte array
+  // read all of the contents of our uploaded file into a
+  // byte array
   fileBytes, err := ioutil.ReadAll(infile)
   if err != nil {
     fmt.Println(err)
   }
+  
+  
+  //The http.DetectContentType function only needs the first 512 bytes of the file to detect its
+  //file type based on the mimesniff algorithm.
+  detectedFileType := http.DetectContentType(fileBytes)
+  switch detectedFileType {
+  case "image/jpeg", "image/jpg":
+  case "image/gif", "image/png":
+  case "application/pdf":
+    break
+  default:
+    fmt.Println("Invalid file type.", http.StatusBadRequest)
+    http.Error(res, "Invalid file type.", http.StatusBadRequest)
+    return
+  }
+  
+
+
+
 
 
   sess := session.Must(session.NewSession())
@@ -272,3 +442,20 @@ func (b Blob) UploadBlobFile(res http.ResponseWriter, req *http.Request) {
   }
 }
 
+
+
+
+
+
+
+
+/***
+import (
+	"crypto/rand"
+)
+func randToken(len int) string {
+	b := make([]byte, len)
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
+}
+***/
