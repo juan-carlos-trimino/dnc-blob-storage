@@ -94,7 +94,7 @@ func (b Blob) CreateBucket(res http.ResponseWriter, req *http.Request) {
 }
 
 /***
-http://xxx.xxx.xxx.xxx/storage/blob/CreateBucket?bucket=XXXX
+http://xxx.xxx.xxx.xxx/storage/blob/DeleteBucket?bucket=XXXX
 ***/
 func (b Blob) DeleteBucket(res http.ResponseWriter, req *http.Request) {
   const paramsRequired int = 1
