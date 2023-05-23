@@ -3,13 +3,12 @@
 # This helps to avoid unnecessarily sending large or sensitive files and directories to the daemon and potentially adding them
 # to images using ADD or COPY.
 # Ignore everything
-# **
+**
 
-# !src/
-# src/*
-# !src/go.mod
-# # !src/go.sum
-# !src/main.go
-# !src/blob/
-# src/blob/*
-# !blob.go
+!src/
+src/*
+!src/go.mod
+!src/main.go
+!src/blob/
+src/blob/*
+!blob.go
