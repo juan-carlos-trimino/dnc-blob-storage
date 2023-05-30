@@ -30,7 +30,7 @@ COPY ./src/stg_types/blob/ ./blob/
 
 # Download necessary Go modules; see https://go.dev/ref/mod#go-mod-download
 RUN go mod download && \
-    # go get stgs/stg_types/blob &&
+    # go get github.com/juan-carlos-trimino/dnc-storage &&
     # go get github.com/rabbitmq/amqp091-go &&
     # Retrieve the SDK.
     go get github.com/IBM/ibm-cos-sdk-go && \
