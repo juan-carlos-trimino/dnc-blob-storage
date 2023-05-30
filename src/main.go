@@ -8,7 +8,7 @@ import (
   "net/http"
   "os"
   "os/signal"
-  "storage/blob"
+  "stgs/stg_types/blob"
   "strconv"
   "strings"
   "syscall"
@@ -41,6 +41,7 @@ func (h *handlers) ServeHTTP(res http.ResponseWriter, req *http.Request) {
   http.NotFound(res, req) //404 - page not found
 }
 
+//The main() function is a special function that is the entry point of an executable program.
 func main() {
   var exists bool = false
   SVC_NAME, exists = os.LookupEnv("SVC_NAME")

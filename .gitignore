@@ -13,6 +13,8 @@ src/*
 !src/go.mod
 #!src/go.sum
 !src/main.go
-!src/blob/
-src/blob/*
-!blob.go
+!src/stg_types/
+src/stg_types/*
+!src/stg_types/blob/
+src/stg_types/blob/*
+!src/stg_types/blob/blob.go
