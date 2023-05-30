@@ -11,6 +11,7 @@
 !src/
 src/*
 !src/go.mod
+!src/go.sum
 !src/main.go
 !src/stg_types/
 src/stg_types/*
