@@ -26,12 +26,11 @@ WORKDIR /goapp/
 COPY ./src/go.* ./
 # Copy the code from the local machine to the container image.
 COPY ./src/main.go ./
-COPY ./src/stg_types/blob/ ./blob/
+COPY ./src/stg_types/blob/ ./stg_types/blob/
 
 # Download necessary Go modules; see https://go.dev/ref/mod#go-mod-download
 RUN go mod download && \
-    # go get github.com/juan-carlos-trimino/dnc-storage &&
-    # go get github.com/rabbitmq/amqp091-go &&
+    go get github.com/rabbitmq/amqp091-go && \
     # Retrieve the SDK.
     go get github.com/IBM/ibm-cos-sdk-go && \
     # Retrieve the latest version of the SDK.
